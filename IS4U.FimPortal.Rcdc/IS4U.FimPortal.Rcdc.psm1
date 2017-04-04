@@ -168,6 +168,9 @@ Function Add-ElementToRcdc {
 	
 	.PARAMETER RcdcElement
 	The XML-element to add to the RCDC
+
+	.PARAMETER BeforeElement
+	Specifies the name of the "my:Control" element in front of which the new element will be added. If this parameter is not specified, the new element will be added at the end of the grouping.
 	
 	.EXAMPLE
 	Add-ElementToRcdc -DisplayName "Configuration for user editing" -GroupingName "Basic" -RcdcElement <Element>
@@ -187,7 +190,11 @@ Function Add-ElementToRcdc {
 		
 		[Parameter(Mandatory=$False)]
 		[String]
-		$GroupingCaption = "Caption"
+		$GroupingCaption = "Caption",
+		
+		[Parameter(Mandatory=$False)]
+		[String]
+		$BeforeElement
 	)
 	$rcdc = Get-FimObject -Attribute DisplayName -Value $DisplayName -ObjectType ObjectVisualizationConfiguration
 	$date = [datetime]::now.ToString("yyyy-MM-dd_HHmmss")
@@ -197,6 +204,7 @@ Function Add-ElementToRcdc {
 	$xDoc = [XDocument]::Load($filename)
 	$panel = [XElement] $xDoc.Root.Element($Ns + "Panel")
 	$grouping = [XElement] ($panel.Elements($Ns + "Grouping") | Where { $_.Attribute($Ns + "Name").Value -eq $GroupingName } | Select -index 0)
+	$control = [XElement] ($grouping.Elements($Ns + "Control")| Where { $_.Attribute($Ns + "Name").Value -eq $BeforeElement } | Select -index 0)
 	
 	if($grouping -eq $null) {
 		$grouping = New-Object XElement ($ns + "Grouping")
@@ -205,15 +213,20 @@ Function Add-ElementToRcdc {
 		$grouping.Add((New-Object XAttribute ($ns + "Enabled"), $true))
 		$grouping.Add((New-Object XAttribute ($ns + "Visible"), $true))
 		$grouping.Add($RcdcElement)
-		$summary = [XElement] ($panel.Elements($Ns + "Grouping") | Where { $_.Attribute($Ns + "IsSummary").Value -eq "true" } | Select -index 0)
+		$summary = [XElement] ($panel.Elements($Ns + "Grouping") | Where { $_.Attribute($Ns + "IsSummary") -ne $null -and $_.Attribute($Ns + "IsSummary").Value -eq "true" } | Select -index 0)
 		if($summary -eq $null) {
 			$panel.Add($grouping)
 		} else {
 			$summary.AddBeforeSelf($grouping)
 		}
 	} else {
-		$grouping.Add($RcdcElement)
+		if($BeforeElement){
+			$control.AddBeforeSelf($RcdcElement)
+		}else{
+			$grouping.Add($RcdcElement)
+		}
 	}
+	
 	$filename = "$pwd/$date" + "_" + $DisplayName + "_after.xml"
 	$xDoc.Save($filename)
 	if(Test-RcdcConfiguration -ConfigurationData $xDoc.ToString()) {
