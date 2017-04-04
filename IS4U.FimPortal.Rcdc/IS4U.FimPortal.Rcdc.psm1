@@ -152,6 +152,30 @@ Function Remove-Rcdc {
 	Remove-FimObject -AnchorName DisplayName -AnchorValue $DisplayName -ObjectType ObjectVisualizationConfiguration
 }
 
+Function Read-RcdcFromFile {
+	<#
+	.SYNOPSIS
+	Reads and validates an RCDC from an .xml file
+	.DESCRIPTION
+	Reads the RCDC from an .xml file and validates the file against the XML schema. Returns a string which can be used as $ConfigurationData
+	.EXAMPLE
+	Read-RcdcFromFile -FilePath ".\user_edit.xmll"
+	.PARAMETER FilePath
+	Specifies the full path to the saved RCDC configuration. Example: ".\user_edit.xml"
+#>
+	param(
+		[Parameter(Mandatory=$True)]
+		[String]
+		$FilePath
+	)
+	[String] $ConfigurationData = Get-Content -Path (Join-Path $pwd $FilePath)
+	if(Test-RcdcConfiguration -ConfigurationData $ConfigurationData) {
+		return $ConfigurationData
+	} else {
+		Write-Warning -Message "Read XML $FilePath is not valid"
+	}
+}
+
 Function Add-ElementToRcdc {
 <#
 	.SYNOPSIS
@@ -235,6 +259,50 @@ Function Add-ElementToRcdc {
 		Write-Warning "Invalid RCDC configuration, Element not added to RCDC"
 	}
 }
+
+Function Remove-ElementFromRcdc {
+<#
+	.SYNOPSIS
+	Removes an element from the RCDC configuration.
+	.DESCRIPTION
+	Removes an element from the RCDC configuration.
+	.EXAMPLE
+	Remove-ElementFromRcdc -DisplayName "Configuration for user editing" -ControlName "Domain"
+	.PARAMETER DisplayName
+	The name of the RCDC in the FIM portal
+	.PARAMETER ControlName
+	The name of the "my:Control" element in the RCDC. If the Control Element can not be found the remove operation will be aborted.
+#>
+	param(
+		[Parameter(Mandatory=$True)]
+		[String]
+		$DisplayName,
+		[Parameter(Mandatory=$True)]
+		[String]
+		$ControlName
+	)
+	$rcdc = Get-FimObject -Attribute DisplayName -Value $DisplayName -ObjectType ObjectVisualizationConfiguration
+	$date = [datetime]::now.ToString("yyyy-MM-dd_HHmmss")
+	$filename = "$pwd/$date" + "_" + $DisplayName + "_before.xml"
+	Write-Output $rcdc.ConfigurationData | Out-File $filename -Encoding UTF8
+	$xDoc = [XDocument]::Load($filename)
+	$panel = [XElement] $xDoc.Root.Element($Ns + "Panel")
+	$control = [XElement] ($panel.Descendants($Ns + "Control")| Where { $_.Attribute($Ns + "Name").Value -eq $ControlName } | Select -index 0)
+	if($control) {
+		$control.Remove()
+	} else {
+		Write-Warning "Control '$ControlName' not found, operation aborted"
+		Remove-Item $filename
+		return
+	}
+	$filename = "$pwd/$date" + "_" + $DisplayName + "_after.xml"			$filename = "$pwd/$date" + "_" + $DisplayName + "_after.xml"
+	$xDoc.Save($filename)			$xDoc.Save($filename)
+	if(Test-RcdcConfiguration -ConfigurationData $xDoc.ToString()) {			if(Test-RcdcConfiguration -ConfigurationData $xDoc.ToString()) {
+		Update-Rcdc -DisplayName $DisplayName -ConfigurationData $xDoc.ToString()				Update-Rcdc -DisplayName $DisplayName -ConfigurationData $xDoc.ToString()
+	} else {			} else {
+		Write-Warning "Invalid RCDC configuration, Element not added to RCDC"				Write-Warning "Invalid RCDC configuration not uploaded"
+	}			}
+}		}
 
 Function Get-DefaultRcdc {
 <#
@@ -527,3 +595,40 @@ Function Get-RcdcCheckBox {
 	$element.Add($properties)
 	return $element
 }
+
+Function Get-RcdcLabel {
+<#
+	.SYNOPSIS
+	Create an XElement configuration for an RCDC Label.
+	.DESCRIPTION
+	Create an XElement configuration for an RCDC Label.
+	.EXAMPLE
+	Get-RcdcLabel -AttributeName LastLogonTimestamp
+#>
+	param(
+		[Parameter(Mandatory=$True)]
+		[String]
+		$AttributeName,
+		
+		[Parameter(Mandatory=$False)]
+		[String]
+		$ControlElementName = $AttributeName
+	)
+	$element = New-Object XElement ($Ns + "Control")
+	$element.Add((New-Object XAttribute ($Ns + "Name"), $ControlElementName))
+	$element.Add((New-Object XAttribute ($Ns + "TypeName"), "UocLabel"))
+	$element.Add((New-Object XAttribute ($Ns + "Caption"), "{Binding Source=schema, Path=$AttributeName.DisplayName}"))
+	$element.Add((New-Object XAttribute ($Ns + "Description"), "{Binding Source=schema, Path=$AttributeName.Description}"))
+	$element.Add((New-Object XAttribute ($Ns + "RightsLevel"), "{Binding Source=rights, Path=$AttributeName}"))
+	$properties = New-Object XElement ($Ns + "Properties")
+	$property = New-Object XElement ($Ns + "Property")
+	$property.Add((New-Object XAttribute ($Ns + "Name"), "Required"))
+	$property.Add((New-Object XAttribute ($Ns + "Value"), "{Binding Source=schema, Path=$AttributeName.Required}"))
+	$properties.Add($property)
+	$property = New-Object XElement ($Ns + "Property")
+	$property.Add((New-Object XAttribute ($Ns + "Name"), "Text"))
+	$property.Add((New-Object XAttribute ($Ns + "Value"), "{Binding Source=object, Path=$AttributeName, Mode=TwoWay}"))
+	$properties.Add($property)			$properties.Add($property)
+	$element.Add($properties)			$element.Add($properties)
+	return $element			return $element
+}		}
