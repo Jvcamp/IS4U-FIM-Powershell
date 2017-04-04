@@ -286,6 +286,12 @@ Function Get-RcdcIdentityPicker {
 	.DESCRIPTION
 	Create an XElement configuration for an RCDC Identity Picker.
 	
+	.PARAMETER AttributeName
+	The Name of the FIM portal attribute the RCDC element should bind to.
+
+	.PARAMETER ControlElementName
+	The name of the 'my:Control' element in the RCDC, which can configured to be different then the FIM portal attribute name. If this parameter is not specified, the 'AttributeName' paramater will be used as name for the controlelement.
+	
 	.EXAMPLE
 	Get-RcdcIdentityPicker -AttributeName DepartmentReference -ObjectType Person
 #>
@@ -293,6 +299,10 @@ Function Get-RcdcIdentityPicker {
 		[Parameter(Mandatory=$True)] 
 		[String]
 		$AttributeName,
+		
+		[Parameter(Mandatory=$False)]
+		[String]
+		$ControlElementName = $AttributeName,
 
 		[Parameter(Mandatory=$True)] 
 		[String]
@@ -323,7 +333,7 @@ Function Get-RcdcIdentityPicker {
 		$MainSearchScreenText = "MainSearchScreenText"
 	)
 	$element = New-Object XElement ($Ns + "Control")
-	$element.Add((New-Object XAttribute ($Ns+"Name"), $AttributeName))
+	$element.Add((New-Object XAttribute ($Ns+"Name"), $ControlElementName))
 	$element.Add((New-Object XAttribute ($Ns+"TypeName"), "UocIdentityPicker"))
 	$element.Add((New-Object XAttribute ($Ns+"Caption"), "{Binding Source=schema, Path=$AttributeName.DisplayName}"))
 	$element.Add((New-Object XAttribute ($Ns+"Description"), "{Binding Source=schema, Path=$AttributeName.Description}"))
@@ -397,8 +407,14 @@ Function Get-RcdcTextBox {
 	.DESCRIPTION
 	Create an XElement configuration for an RCDC Text Box.
 	
+	.PARAMETER AttributeName
+	The Name of the FIM portal attribute the RCDC element should bind to.
+
+	.PARAMETER ControlElementName
+	The name of the 'my:Control' element in the RCDC, which can configured to be different then the FIM portal attribute name. If this parameter is not specified, the 'AttributeName' paramater will be used as name for the controlelement.
+	
 	.EXAMPLE
-	Get-RcdcTextBox -AttributeName VisaCardNumber
+	Get-RcdcTextBox -AttributeName VisaCardNumber -ControlElementName uniqueNameVisa
 #>
 	param(
 		[Parameter(Mandatory=$True)] 
@@ -406,7 +422,7 @@ Function Get-RcdcTextBox {
 		$AttributeName
 	)
 	$element = New-Object XElement ($Ns + "Control")
-	$element.Add((New-Object XAttribute ($Ns + "Name"), $AttributeName))
+	$element.Add((New-Object XAttribute ($Ns + "Name"), $ControlElementName))
 	$element.Add((New-Object XAttribute ($Ns + "TypeName"), "UocTextBox"))
 	$element.Add((New-Object XAttribute ($Ns + "Caption"), "{Binding Source=schema, Path=$AttributeName.DisplayName}"))
 	$element.Add((New-Object XAttribute ($Ns + "Description"), "{Binding Source=schema, Path=$AttributeName.Description}"))
@@ -454,6 +470,15 @@ Function Get-RcdcCheckBox {
 
 	.DESCRIPTION
 	Create an XElement configuration for an RCDC Check Box.
+
+	.PARAMETER AttributeName
+	The Name of the FIM portal attribute the RCDC element should bind to.
+
+	.PARAMETER ControlElementName
+	The name of the 'my:Control' element in the RCDC, which can configured to be different then the FIM portal attribute name. If this parameter is not specified, the 'AttributeName' paramater will be used as name for the controlelement.
+	
+	.PARAMETER ReadOnly
+	Defines if the checkbox is readonly. This value defaults to "false"
 	
 	.EXAMPLE
 	Get-RcdcCheckBox -AttributeName IsAwesome
@@ -462,9 +487,17 @@ Function Get-RcdcCheckBox {
 		[Parameter(Mandatory=$True)] 
 		[String]
 		$AttributeName
+
+		[Parameter(Mandatory=$False)]
+		[String]
+		$ControlElementName = $AttributeName,
+		
+		[Parameter(Mandatory=$False)]
+		[String]
+		$ReadOnly = "False"
 	)
 	$element = New-Object XElement ($Ns + "Control")
-	$element.Add((New-Object XAttribute ($Ns + "Name"), $AttributeName))
+	$element.Add((New-Object XAttribute ($Ns + "Name"), $ControlElementName))
 	$element.Add((New-Object XAttribute ($Ns + "TypeName"), "UocCheckBox"))
 	$element.Add((New-Object XAttribute ($Ns + "Caption"), "{Binding Source=schema, Path=$AttributeName.DisplayName}"))
 	$element.Add((New-Object XAttribute ($Ns + "Description"), "{Binding Source=schema, Path=$AttributeName.Description}"))
