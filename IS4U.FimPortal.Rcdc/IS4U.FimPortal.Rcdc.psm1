@@ -129,15 +129,15 @@ Function Update-Rcdc {
 		$anchor = @{'DisplayName' = $DisplayName}
 		$changes = @{"ConfigurationData" = $ConfigurationData}
 		New-FimImportObject -ObjectType ObjectVisualizationConfiguration -State Put -Anchor $anchor -Changes $changes -ApplyNow
-        if($Script:AutoAppPoolRecycle){
-            Write-Host "Automated AppPool recycle is: " -NoNewline
-            Write-Host "enabled" -ForegroundColor Green
-            Restart-ApplicationPool -Site $(Find-FIMPortalSite)
-        }else{
-            Write-Host "Automated AppPool recycle is: " -NoNewline
-            Write-Host "disabled" -NoNewline -ForegroundColor Yellow
-            Write-Host ", recycle appPool manually or run 'Enable-AutoAppPoolRecycle'"
-        }
+		if($Script:AutoAppPoolRecycle){
+			Write-Host "Automated AppPool recycle is: " -NoNewline
+			Write-Host "enabled" -ForegroundColor Green
+			Restart-ApplicationPool -Site $(Find-FIMPortalSite)
+		}else{
+			Write-Host "Automated AppPool recycle is: " -NoNewline
+			Write-Host "disabled" -NoNewline -ForegroundColor Yellow
+			Write-Host ", recycle appPool manually or run 'Enable-AutoAppPoolRecycle'"
+		}
 	} else {
 		Write-Warning "Invalid RCDC configuration, RCDC not updated"
 	}
@@ -644,13 +644,13 @@ Function Get-RcdcLabel {
 }	
 
 Function Enable-AutoAppPoolRecycle{
-    if(Test-IsUserAdmin){
-        $Script:AutoAppPoolRecycle = $true
-    }else{
-        Write-Warning "Elevated permissions are required"
-    }
+	if(Test-IsUserAdmin){
+		$Script:AutoAppPoolRecycle = $true
+	}else{
+		Write-Warning "Elevated permissions are required"
+	}
 }	
 
 Function Disable-AutoAppPoolRecycle{
-    $Script:AutoAppPoolRecycle = $false
+	$Script:AutoAppPoolRecycle = $false
 }	
