@@ -39,7 +39,7 @@ Function Start-Is4uFimSchedule {
 function Find-FIMPortalSite{
 <#
 	.SYNOPSIS
-	Lists all available IIS sites ands lets you choose which one is the FIM Portal site. Subsequent runs will remeber your choice unless the -ResetSite parameter is set to true.
+	Lists all available IIS sites ands lets you choose which one is the FIM Portal site. Subsequent runs will remeber your choice unless the -ResetSite switch is specified.
 
 	.DESCRIPTION
 	Lists all available IIS sites ands lets you choose which one is the FIM Portal site. Subsequent runs will remeber your choice unless the -ResetSite parameter is set to true. Your choice is saved as '$Script:FIMPortalSiteName' (script scope).
@@ -48,15 +48,12 @@ function Find-FIMPortalSite{
 	Defaults to $false. If set to $true a previously specified choice of FIM Portal site will be discarded and you will be forced to choose again.
 
 	.EXAMPLE1
-	Find-FIMPortalSite
-
-	.EXAMPLE2
-	Find-FIMPortalSite -ResetSite $true
+	Find-FIMPortalSite -ResetSite
 #>
 	param(
 		[Parameter(Mandatory=$false)]
-		[bool]
-		$ResetSite =$false
+		[switch]
+		$ResetSite
 	)
 	if($(Test-Path variable:script:FIMPortalSiteName) -and !$ResetSite){
 		return $Script:FIMPortalSiteName
