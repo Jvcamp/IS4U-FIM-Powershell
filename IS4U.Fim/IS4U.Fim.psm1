@@ -36,6 +36,67 @@ Function Start-Is4uFimSchedule {
 	}
 }
 
+function Find-FIMPortalSite{
+<#
+	.SYNOPSIS
+	Lists all available IIS sites ands lets you choose which one is the FIM Portal site. Subsequent runs will remeber your choice unless the -ResetSite parameter is set to true.
+
+	.DESCRIPTION
+	Lists all available IIS sites ands lets you choose which one is the FIM Portal site. Subsequent runs will remeber your choice unless the -ResetSite parameter is set to true. Your choice is saved as '$Script:FIMPortalSiteName' (script scope).
+
+    .PARAMETER ResetSite
+    Defaults to $false. If set to $true a previously specified choice of FIM Portal site will be discarded and you will be forced to choose again.
+
+	.EXAMPLE1
+	Find-FIMPortalSite
+
+    .EXAMPLE2
+    Find-FIMPortalSite -ResetSite $true
+#>
+    param(
+        [Parameter(Mandatory=$false)]
+        [bool]
+        $ResetSite =$false
+    )
+    if($(Test-Path variable:script:FIMPortalSiteName) -and !$ResetSite){
+        return $Script:FIMPortalSiteName
+    }else{
+	    if(!$(Test-IsUserAdmin)) {
+		    Write-Warning "Elevated permissions are required"
+	    } else {
+    	    # Load IIS module:
+            if($(Get-Module |select -expand Name) -notcontains "WebAdministration"){
+	            Import-Module WebAdministration
+            }
+            $Sites = Get-WebSite | Select -Expand Name
+            Write-Host ""
+            Write-Host "Found Sites:"
+            Write-Host "============"
+            do{
+                [int]$chosen = 0
+                [int]$choice = 1
+                foreach($site in $Sites){
+                Write-Host "($choice)  " -NoNewline
+                Write-Host "$site"
+                $choice++
+                }
+                Write-Host ""
+            try{
+            $chosen = Read-Host "Specify the FIM Portal Site (enter the number)"
+            }catch{
+                if($_.Exception.gettype().fullName -eq "System.Management.Automation.ArgumentTransformationMetadataException"){
+                    Write-Host "You did not enter a number" -ForegroundColor Red
+                }else{
+                    Throw $_.Exception
+                }
+            }
+            }While($chosen -ge $choice -or $chosen -lt 1)
+            $Script:FIMPortalSiteName = $Sites[$chosen-1]
+            return $Script:FIMPortalSiteName
+        }
+    }
+}
+
 Function Get-FimStatus {
 <#
 	.SYNOPSIS
@@ -296,29 +357,53 @@ Function Set-WmiPermission {
 Function Restart-ApplicationPool {
 <#
 	.SYNOPSIS
-	Restarts the (MIM Portal) application pool.
+	Restarts the application pool of the specified site.
 
 	.DESCRIPTION
-	Restarts the (MIM Portal) application pool.
+	Restarts the application pool of the specified  site.
 
-	.EXAMPLE
+    .PARAMETER Site
+    Specifies the site name. The module looks up the application pool based on the site name. If you pass '$(Find-FIMPortalSite)' as site name you can select a site as the FIM portal site. 
+
+	.EXAMPLE1
 	Restart-MimAppPool -Site "MIM Portal"
+
+    .EXAMPLE2
+    Restart-ApplicationPool -Site $(Find-FIMPortalSite)
 #>
 	param( 
 		[Parameter(Mandatory=$False)]
 		[String]
 		$Site = "MIM Portal"
 	)
-	# Load IIS module:
-	Import-Module WebAdministration
-	$currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
-	$admin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
-	if($admin -eq $false) {
-		Write-Warning "Elevated prompt required"
+	if(!$(Test-IsUserAdmin)) {
+		Write-Warning "Elevated permissions are required"
 	} else {
+    	# Load IIS module:
+        if($(Get-Module |select -expand Name) -notcontains "WebAdministration"){
+	    Import-Module WebAdministration
+        }
 		# Get pool name by the site name:
 		$pool = (Get-Item "IIS:\Sites\$Site" | Select-Object applicationPool).applicationPool
 		# Recycle the application pool:
 		Restart-WebAppPool $pool
+
+        $event = Get-EventLog -LogName System -Source WAS -Newest 1 |select message,timewritten
+        if($($event.Message.split("'")[1]) -eq $Site){
+            Write-Host "$($event.TimeWritten) - Application pool recycle initiated for site '$Site'" -ForegroundColor Green
+        }
 	}
 }
+
+Function Test-IsUserAdmin{
+<#
+	.SYNOPSIS
+	Test if the user is a local administrator.
+
+	.DESCRIPTION
+	Test if the user is a local administrator.
+#>
+$currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
+return $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+}
+
