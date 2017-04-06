@@ -19,6 +19,7 @@ $Dir = Split-Path -Parent $MyInvocation.MyCommand.Path
 [XNamespace] $Ns = "http://schemas.microsoft.com/2006/11/ResourceManagement"
 $RcdcSchema = New-Object System.Xml.Schema.XmlSchemaSet
 $RcdcSchema.Add($Ns, (Join-Path $Dir ".\rcdc.xsd"))
+$Script:AutoAppPoolRecycle = $false
 
 Function Test-RcdcConfiguration {
 <#
@@ -128,6 +129,15 @@ Function Update-Rcdc {
 		$anchor = @{'DisplayName' = $DisplayName}
 		$changes = @{"ConfigurationData" = $ConfigurationData}
 		New-FimImportObject -ObjectType ObjectVisualizationConfiguration -State Put -Anchor $anchor -Changes $changes -ApplyNow
+        if($Script:AutoAppPoolRecycle){
+            Write-Host "Automated AppPool recycle is: " -NoNewline
+            Write-Host "enabled" -ForegroundColor Green
+            Restart-ApplicationPool -Site $(Find-FIMPortalSite)
+        }else{
+            Write-Host "Automated AppPool recycle is: " -NoNewline
+            Write-Host "disabled" -NoNewline -ForegroundColor Yellow
+            Write-Host ", recycle appPool manually or run 'Enable-AutoAppPoolRecycle'"
+        }
 	} else {
 		Write-Warning "Invalid RCDC configuration, RCDC not updated"
 	}
@@ -168,7 +178,7 @@ Function Read-RcdcFromFile {
 		[String]
 		$FilePath
 	)
-	[String] $ConfigurationData = Get-Content -Path (Join-Path $pwd $FilePath)
+	[String] $ConfigurationData = Get-Content -Path $FilePath
 	if(Test-RcdcConfiguration -ConfigurationData $ConfigurationData) {
 		return $ConfigurationData
 	} else {
@@ -295,14 +305,14 @@ Function Remove-ElementFromRcdc {
 		Remove-Item $filename
 		return
 	}
-	$filename = "$pwd/$date" + "_" + $DisplayName + "_after.xml"			$filename = "$pwd/$date" + "_" + $DisplayName + "_after.xml"
-	$xDoc.Save($filename)			$xDoc.Save($filename)
+	$filename = "$pwd/$date" + "_" + $DisplayName + "_after.xml"
+	$xDoc.Save($filename)
 	if(Test-RcdcConfiguration -ConfigurationData $xDoc.ToString()) {			if(Test-RcdcConfiguration -ConfigurationData $xDoc.ToString()) {
 		Update-Rcdc -DisplayName $DisplayName -ConfigurationData $xDoc.ToString()				Update-Rcdc -DisplayName $DisplayName -ConfigurationData $xDoc.ToString()
 	} else {			} else {
 		Write-Warning "Invalid RCDC configuration, Element not added to RCDC"				Write-Warning "Invalid RCDC configuration not uploaded"
 	}			}
-}		}
+}		
 
 Function Get-DefaultRcdc {
 <#
@@ -554,7 +564,7 @@ Function Get-RcdcCheckBox {
 	param(
 		[Parameter(Mandatory=$True)] 
 		[String]
-		$AttributeName
+		$AttributeName,
 
 		[Parameter(Mandatory=$False)]
 		[String]
@@ -628,7 +638,19 @@ Function Get-RcdcLabel {
 	$property = New-Object XElement ($Ns + "Property")
 	$property.Add((New-Object XAttribute ($Ns + "Name"), "Text"))
 	$property.Add((New-Object XAttribute ($Ns + "Value"), "{Binding Source=object, Path=$AttributeName, Mode=TwoWay}"))
-	$properties.Add($property)			$properties.Add($property)
-	$element.Add($properties)			$element.Add($properties)
-	return $element			return $element
-}		}
+	$properties.Add($property)
+	$element.Add($properties)
+	return $element
+}	
+
+Function Enable-AutoAppPoolRecycle{
+    if(Test-IsUserAdmin){
+        $Script:AutoAppPoolRecycle = $true
+    }else{
+        Write-Warning "Elevated permissions are required"
+    }
+}	
+
+Function Disable-AutoAppPoolRecycle{
+    $Script:AutoAppPoolRecycle = $false
+}	
