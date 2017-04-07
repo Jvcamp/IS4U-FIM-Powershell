@@ -39,6 +39,7 @@ Function New-Attribute {
 	Specifies the attribute type. Supported values are: "'String', 'DateTime', 'Integer', 'Reference', 'Boolean', 'Text', 'Binary'"
 
 	.PARAMETER IncludeValidation
+	Include validation parameters of this attribute. This is only supported if the Type is 'String' or 'Integer'. If the Type is integer, you can specify additionnal parameters '-MaxValue' and '-MinValue'. If the Type is string you can specify the additionnal parameter '-RegexString'.
 #>
 	param(
 		[Parameter(Mandatory=$True)]
