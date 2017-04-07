@@ -25,6 +25,20 @@ Function New-Attribute {
 
 	.EXAMPLE
 	New-Attribute -Name Visa -DisplayName Visa -Type String -MultiValued "False"
+
+	.PARAMETER Name
+	Specifies the system name of the Attribute
+
+	.PARAMETER DisplayName
+	Specifies the displayname of the Attribute
+
+	.PARAMETER Description
+	Specifies the description of the Attribute
+
+	.PARAMETER Type
+	Specifies the attribute type. Supported values are: "'String', 'DateTime', 'Integer', 'Reference', 'Boolean', 'Text', 'Binary'"
+
+	.PARAMETER IncludeValidation
 #>
 	param(
 		[Parameter(Mandatory=$True)]
@@ -46,17 +60,82 @@ Function New-Attribute {
 
 		[Parameter(Mandatory=$False)]
 		[String]
-		$MultiValued = "False"
+		$MultiValued = "False",
+
+		[Parameter(Mandatory=$False)]
+		[switch]
+		$IncludeValidation
 	)
-	$changes = @{}
-	$changes.Add("DisplayName", $DisplayName)
-	$changes.Add("Name", $Name)
-	$changes.Add("Description", $Description)
-	$changes.Add("DataType", $Type)
-	$changes.Add("Multivalued", $MultiValued)
-	$attr = New-FimImportObject -ObjectType AttributeTypeDescription -State Create -Changes $changes -ApplyNow -SkipDuplicateCheck -PassThru
-	[UniqueIdentifier] $id = $attr.TargetObjectIdentifier
-	return $id
+	DynamicParam{
+		if($IncludeValidation){
+			if($Type -eq "Integer"){
+				$MaxValue = New-Object System.Management.Automation.ParameterAttribute
+				$MaxValue.Mandatory = $false
+				$MinValue = New-Object System.Management.Automation.ParameterAttribute
+				$MinValue.Mandatory = $false
+						 
+				$attributeCollection = new-object System.Collections.ObjectModel.Collection[System.Attribute]
+				$attributeCollection.Add($MaxValue)
+				$MaxParam = New-Object System.Management.Automation.RuntimeDefinedParameter('MaxValue', [string], $attributeCollection)
+
+				$attributeCollection = new-object System.Collections.ObjectModel.Collection[System.Attribute]
+				$attributeCollection.Add($MinValue)
+				$MinParam = New-Object System.Management.Automation.RuntimeDefinedParameter('MinValue', [string], $attributeCollection)
+
+				$paramDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+				$paramDictionary.Add('MaxValue', $MaxParam)
+				$paramDictionary.Add('MinValue', $MinParam)
+				return $paramDictionary
+
+			}elseif($Type -eq "String"){
+				$Regex = New-Object System.Management.Automation.ParameterAttribute
+				$Regex.Mandatory = $true
+						  
+				$attributeCollection = new-object System.Collections.ObjectModel.Collection[System.Attribute]
+				$attributeCollection.Add($Regex)
+				$RegexParam = New-Object System.Management.Automation.RuntimeDefinedParameter('RegexString', [string], $attributeCollection)
+				$paramDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+				$paramDictionary.Add('RegexString', $RegexParam)
+				return $paramDictionary
+			}
+		}
+	}
+	Process{
+	    $changes = @{}
+	    $changes.Add("DisplayName", $DisplayName)
+	    $changes.Add("Name", $Name)
+	    $changes.Add("Description", $Description)
+	    $changes.Add("DataType", $Type)
+	    $changes.Add("Multivalued", $MultiValued)
+		if($IncludeValidation){
+			if($Type -eq "Integer")
+			{
+				try{
+					if($PSBoundParameters.MinValue){
+						$changes.Add("IntegerMinimum",$($PSBoundParameters.MinValue))
+					
+					}
+				}catch [System.Management.Automation.PropertyNotFoundException]{
+					Write-Verbose "$($_.Exception.Message)"
+				}
+				try{
+					if($PSBoundParameters.MaxValue -ne "Not Specified"){
+						$changes.Add("IntegerMaximum",$($PSBoundParameters.MaxValue))
+					}
+				}catch [System.Management.Automation.PropertyNotFoundException]{
+					Write-Verbose "$($_.Exception.Message)"
+				}
+			}elseif($Type -eq "String"){
+				if($PSBoundParameters.RegexString){
+					$changes.Add("StringRegex",$($PSBoundParameters.RegexString))
+				}
+			}
+		}
+
+	    $attr = New-FimImportObject -ObjectType AttributeTypeDescription -State Create -Changes $changes -ApplyNow -SkipDuplicateCheck -PassThru
+	    [UniqueIdentifier] $id = $attr.TargetObjectIdentifier
+	    return $id
+	}
 }
 
 Function Update-Attribute {
