@@ -69,12 +69,15 @@ Function New-Rcdc {
 		[String]
 		$ConfigurationData,
 
+		[Parameter(Mandatory=$false,parametersetname="AppliesToEdit")]
 		[Switch]
 		$AppliesToEdit,
 
+		[Parameter(Mandatory=$false,parametersetname="AppliesToView")]
 		[Switch]
 		$AppliesToView,
 
+		[Parameter(Mandatory=$false,parametersetname="AppliesToCreate")]
 		[Switch]
 		$AppliesToCreate
 	)
@@ -83,18 +86,19 @@ Function New-Rcdc {
 		$changes += New-FimImportChange -Operation 'None' -AttributeName 'DisplayName' -AttributeValue $DisplayName
 		$changes += New-FimImportChange -Operation 'None' -AttributeName 'TargetObjectType' -AttributeValue $TargetObjectType
 		$changes += New-FimImportChange -Operation 'None' -AttributeName 'ConfigurationData' -AttributeValue $ConfigurationData
-		if($AppliesToCreate) {
-			$changes += New-FimImportChange -Operation 'None' -AttributeName 'AppliesToCreate' -AttributeValue $True
-			$changes += New-FimImportChange -Operation 'None' -AttributeName 'AppliesToEdit' -AttributeValue $False
-			$changes += New-FimImportChange -Operation 'None' -AttributeName 'AppliesToView' -AttributeValue $False
-		} elseif($AppliesToEdit) {
-			$changes += New-FimImportChange -Operation 'None' -AttributeName 'AppliesToCreate' -AttributeValue $False
-			$changes += New-FimImportChange -Operation 'None' -AttributeName 'AppliesToEdit' -AttributeValue $True
-			$changes += New-FimImportChange -Operation 'None' -AttributeName 'AppliesToView' -AttributeValue $False
-		} elseif($AppliesToView) {
-			$changes += New-FimImportChange -Operation 'None' -AttributeName 'AppliesToCreate' -AttributeValue $False
-			$changes += New-FimImportChange -Operation 'None' -AttributeName 'AppliesToEdit' -AttributeValue $False
-			$changes += New-FimImportChange -Operation 'None' -AttributeName 'AppliesToView' -AttributeValue $True
+		switch($PsCmdlet.ParameterSetName){		
+			"AppliesToCreate" {
+			    $changes += New-FimImportChange -Operation 'None' -AttributeName 'AppliesToCreate' -AttributeValue $True
+			    $changes += New-FimImportChange -Operation 'None' -AttributeName 'AppliesToEdit' -AttributeValue $False
+			    $changes += New-FimImportChange -Operation 'None' -AttributeName 'AppliesToView' -AttributeValue $False}
+		    "AppliesToEdit" {
+			    $changes += New-FimImportChange -Operation 'None' -AttributeName 'AppliesToCreate' -AttributeValue $False
+			    $changes += New-FimImportChange -Operation 'None' -AttributeName 'AppliesToEdit' -AttributeValue $True
+			    $changes += New-FimImportChange -Operation 'None' -AttributeName 'AppliesToView' -AttributeValue $False}
+		    "AppliesToView" {
+			    $changes += New-FimImportChange -Operation 'None' -AttributeName 'AppliesToCreate' -AttributeValue $False
+			    $changes += New-FimImportChange -Operation 'None' -AttributeName 'AppliesToEdit' -AttributeValue $False
+			    $changes += New-FimImportChange -Operation 'None' -AttributeName 'AppliesToView' -AttributeValue $True}
 		}
 		New-FimImportObject -ObjectType ObjectVisualizationConfiguration -State Create -Changes $changes -ApplyNow
 	} else {
@@ -653,4 +657,4 @@ Function Enable-AutoAppPoolRecycle{
 
 Function Disable-AutoAppPoolRecycle{
 	$Script:AutoAppPoolRecycle = $false
-}	
+}
