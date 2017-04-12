@@ -405,6 +405,19 @@ return $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administra
 }
 
 Function Get-SyncGroupMembers{
+	<#
+	.SYNOPSIS
+	Finds the MIM Sync Administrative Security groups, and the members which are part of those groups.
+
+	.DESCRIPTION
+	Finds the MIM Sync Administrative Security groups, and the members which are part of those groups. By default this function looks for groups with 'MIM' in their name. This can be changed by specifying the -filter parameter.
+
+	.PARAMETER filter
+	Specify this parameter to use a custom filter to lookup the MIM Sync Administrative Security groups. This is implemented as "name -like '*$filter*'".
+
+	.EXAMPLE1
+	Get-SyncGroupMembers -filter "FIM"
+#>
 	param(
 		[Parameter(Mandatory = $false)]
 		[String]
