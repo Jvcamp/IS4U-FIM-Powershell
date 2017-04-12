@@ -58,7 +58,7 @@ function Find-FIMPortalSite{
 	if($(Test-Path variable:script:FIMPortalSiteName) -and !$ResetSite){
 		return $Script:FIMPortalSiteName
 	}else{
-	    if(!$(Test-IsUserAdmin)) {
+	    if(!$(Test-RunAsAdmin)) {
 		    Write-Warning "Elevated permissions are required"
 	    } else {
 		    # Load IIS module:
@@ -373,7 +373,7 @@ Function Restart-ApplicationPool {
 		[String]
 		$Site = "MIM Portal"
 	)
-	if(!$(Test-IsUserAdmin)) {
+	if(!$(Test-RunAsAdmin)) {
 		Write-Warning "Elevated permissions are required"
 	} else {
 		# Load IIS module:
@@ -392,7 +392,7 @@ Function Restart-ApplicationPool {
 	}
 }
 
-Function Test-IsUserAdmin{
+Function Test-RunAsAdmin{
 <#
 	.SYNOPSIS
 	Test if the user is a local administrator.
@@ -404,3 +404,21 @@ $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Princi
 return $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 }
 
+Function Get-SyncGroupMembers{
+	param(
+		[Parameter(Mandatory = $false)]
+		[String]
+		$filter = "mim"
+	)
+	if($(Get-Module|select name) -notcontains "ActiveDirectory"){
+		Import-Module "ActiveDirectory"
+	}
+	write-host "Get-AdGroup -filter 'name -like  *$filter*'"
+	foreach($groupname in $(Get-AdGroup -filter "name -like  '*$filter*'" |select -expand name)){
+		write-host "$groupname : "
+		foreach( $useraccount in (Get-AdGroupMember $groupname | select -expand name)){
+			Write-host "`t`t $useraccount" 
+		}
+		write-host "`n"
+	}
+}
