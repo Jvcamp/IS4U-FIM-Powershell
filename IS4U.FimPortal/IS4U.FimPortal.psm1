@@ -295,6 +295,31 @@ Function Set-ObjectSid {
 	}
 }
 
+Function Set-BulkObjectSid{
+	<#
+	.SYNOPSIS
+	Set the object sid of a number of portal users to the correct value based on a file with accountnames.
+
+	.DESCRIPTION
+	Set the object sid of a number of portal users to the correct value based on a file with accountnames.
+
+	.PARAMETER FullFilePath
+	The full filepath of the file with the accountnames. In the file specify one accountname per line.
+	
+	.EXAMPLE
+	Set-ObjectSid -FullFilePath "C:/tmp/accountnamestofix.txt"
+	#>
+	param(
+		[Parameter(Mandatory=$True)]
+		[String]
+		$FullFilePath
+	)
+	foreach( $accname in $(Get-Content -Path $FullFilePath){
+		Write-Verbose "Setting ObjectSID for accountname: `"$accname`""
+		set-objectsid -AccountName $accname
+	}
+}
+
 Function New-Workflow {
 <#
 	.SYNOPSIS
@@ -389,7 +414,7 @@ Function New-Mpr {
 		$DisplayName,
 
 		[Parameter(Mandatory=$True)]
-        [UniqueIdentifier]
+		[UniqueIdentifier]
 		$PrincipalSetId,
 		
 		[Parameter(Mandatory=$True)]
