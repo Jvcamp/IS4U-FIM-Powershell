@@ -410,9 +410,6 @@ Function Get-SyncGroupMembers{
 		[String]
 		$filter = "mim"
 	)
-	if($(Get-Module|select name) -notcontains "ActiveDirectory"){
-		Import-Module "ActiveDirectory"
-	}
 	write-host "Get-AdGroup -filter 'name -like  *$filter*'"
 	foreach($groupname in $(Get-AdGroup -filter "name -like  '*$filter*'" |select -expand name)){
 		write-host "$groupname : "
